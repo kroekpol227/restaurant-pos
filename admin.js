@@ -2,8 +2,9 @@ import { db } from "./firebase-config.js";
 import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const ordersListEl = document.getElementById('admin-orders-list');
+const adminMenuListEl = document.getElementById('admin-menu-list');
 
-// ฟังก์ชันดึงออเดอร์แบบ Real-time
+// 1. ฟังก์ชันดึงออเดอร์แบบ Real-time
 function listenOrders() {
     const q = query(collection(db, "orders"));
 
@@ -84,6 +85,45 @@ function listenOrders() {
     });
 }
 
+// 2. ฟังก์ชันดึงรายการเมนูมาแสดงในหน้า Admin แบบ Real-time
+function listenMenus() {
+    const q = query(collection(db, "menus"));
+
+    onSnapshot(q, (snapshot) => {
+        if (!adminMenuListEl) return;
+
+        if (snapshot.empty) {
+            adminMenuListEl.innerHTML = '<div class="text-center py-6 text-gray-400 col-span-full">ยังไม่มีเมนูในร้าน</div>';
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach((docSnap) => {
+            const menuId = docSnap.id;
+            const menu = docSnap.data();
+
+            let catLabel = '🍲 อาหาร';
+            if (menu.category === 'drink') catLabel = '🧋 เครื่องดื่ม';
+            if (menu.category === 'burger') catLabel = '🍔 เบอร์เกอร์';
+
+            html += `
+                <div class="bg-gray-50 border border-gray-200 p-3 rounded-xl flex justify-between items-center">
+                    <div>
+                        <h4 class="font-semibold text-sm text-gray-800">${menu.name}</h4>
+                        <div class="text-xs text-gray-500">${catLabel} | <span class="text-orange-600 font-bold">${menu.price} บาท</span></div>
+                    </div>
+                    <button onclick="window.deleteMenu('${menuId}')" 
+                        class="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg text-xs transition cursor-pointer" title="ลบเมนูนี้">
+                        🗑️ ลบ
+                    </button>
+                </div>
+            `;
+        });
+
+        adminMenuListEl.innerHTML = html;
+    });
+}
+
 // ฟังก์ชันอัปเดตสถานะออเดอร์
 window.updateStatus = async function(orderId, newStatus) {
     try {
@@ -107,7 +147,20 @@ window.deleteOrder = async function(orderId) {
     }
 }
 
-// ฟังก์ชันเพิ่มเมนูอาหาร/เครื่องดื่มใหม่เข้าร้าน (บันทึกลง collection "menus")
+// ฟังก์ชันลบเมนูออกจากร้าน (ลบจาก collection "menus")
+window.deleteMenu = async function(menuId) {
+    if (confirm('⚠️ คุณต้องการลบเมนูนี้ออกจากร้านใช่หรือไม่? ลูกค้าจะไม่สามารถสั่งได้อีก')) {
+        try {
+            await deleteDoc(doc(db, "menus", menuId));
+            alert('🗑️ ลบเมนูเรียบร้อยแล้ว');
+        } catch (e) {
+            console.error("Error deleting menu: ", e);
+            alert('เกิดข้อผิดพลาดในการลบเมนู');
+        }
+    }
+}
+
+// ฟังก์ชันเพิ่มเมนูอาหาร/เครื่องดื่มใหม่เข้าร้าน
 const addMenuForm = document.getElementById('add-menu-form');
 if (addMenuForm) {
     addMenuForm.addEventListener('submit', async (e) => {
@@ -132,3 +185,4 @@ if (addMenuForm) {
 }
 
 listenOrders();
+listenMenus();
