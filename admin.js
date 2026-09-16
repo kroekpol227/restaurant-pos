@@ -61,7 +61,6 @@ function listenOrders() {
                             <span class="text-orange-600 text-base">${total} บาท</span>
                         </div>
                         
-                        <!-- ปุ่มเปลี่ยนสถานะออเดอร์ -->
                         <div class="grid grid-cols-3 gap-2">
                             <button onclick="window.updateStatus('${orderId}', 'pending')" 
                                 class="bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-xs py-2 rounded-xl font-medium transition cursor-pointer border border-yellow-200">
@@ -108,27 +107,26 @@ window.deleteOrder = async function(orderId) {
     }
 }
 
-// ฟังก์ชันเพิ่มออเดอร์ใหม่จากหน้าแอดมิน
-const addOrderForm = document.getElementById('add-order-form');
-if (addOrderForm) {
-    addOrderForm.addEventListener('submit', async (e) => {
+// ฟังก์ชันเพิ่มเมนูอาหาร/เครื่องดื่มใหม่เข้าร้าน (บันทึกลง collection "menus")
+const addMenuForm = document.getElementById('add-menu-form');
+if (addMenuForm) {
+    addMenuForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const table = document.getElementById('admin-table').value;
-        const name = document.getElementById('admin-menu-name').value;
-        const price = Number(document.getElementById('admin-price').value);
+        const name = document.getElementById('menu-name').value;
+        const price = Number(document.getElementById('menu-price').value);
+        const category = document.getElementById('menu-category').value;
 
         try {
-            await addDoc(collection(db, "orders"), {
-                table: table,
-                items: [{ name: name, price: price, qty: 1 }],
-                status: 'pending',
-                createdAt: serverTimestamp()
+            await addDoc(collection(db, "menus"), {
+                name: name,
+                price: price,
+                category: category
             });
-            addOrderForm.reset();
-            alert('🎉 เพิ่มออเดอร์สำเร็จ!');
+            addMenuForm.reset();
+            alert('🎉 เพิ่มเมนูใหม่เข้าร้านเรียบร้อยแล้ว!');
         } catch (err) {
-            console.error("Error adding order: ", err);
-            alert('เกิดข้อผิดพลาดในการเพิ่มออเดอร์');
+            console.error("Error adding menu: ", err);
+            alert('เกิดข้อผิดพลาดในการเพิ่มเมนู');
         }
     });
 }
