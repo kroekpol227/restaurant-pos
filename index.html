@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>สั่งอาหาร - โต๊ะ <span id="table-num"></span></title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>เมนูอาหาร (โต๊ะ <span id="display-table"></span>)</h1>
+        
+        <!-- รายการเมนูจาก Firestore -->
+        <div id="menu-list" class="grid"></div>
+
+        <div class="cart-section">
+            <h2>ตะกร้าสินค้า</h2>
+            <div id="cart-items">ยังไม่มีสินค้าในตะกร้า</div>
+            <button id="checkout-btn" onclick="submitOrder()" disabled>ยืนยันการสั่งซื้อ</button>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
