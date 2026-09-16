@@ -1,11 +1,10 @@
 import { db } from "./firebase-config.js";
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const ordersListEl = document.getElementById('admin-orders-list');
 
-// ฟังก์ชันดึงออเดอร์แบบ Real-time ด้วย onSnapshot
+// ฟังก์ชันดึงออเดอร์แบบ Real-time
 function listenOrders() {
-    // เรียงลำดับจากใหม่ไปเก่า (ถ้ามี field createdAt) หรือดึงทั้งหมด
     const q = query(collection(db, "orders"));
 
     onSnapshot(q, (snapshot) => {
@@ -36,7 +35,7 @@ function listenOrders() {
             let total = 0;
             if (order.items && Array.isArray(order.items)) {
                 order.items.forEach(i => {
-                    itemsHtml += `<li class="text-sm text-gray-600 flex justify-between"><span>• ${i.name} x ${i.qty}</span> <span class="font-medium">${i.price * i.qty} บาท</span></li>`;
+                    itemsHtml += `<li class="text-sm text-gray-600 flex justify-between py-1"><span>• ${i.name} x ${i.qty}</span> <span class="font-medium">${i.price * i.qty} บาท</span></li>`;
                     total += i.price * i.qty;
                 });
             }
@@ -46,7 +45,12 @@ function listenOrders() {
                     <div>
                         <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
                             <span class="font-bold text-base text-gray-800">โต๊ะ: ${order.table}</span>
-                            <span class="text-xs px-3 py-1 rounded-full font-medium border ${statusBg}">${statusText}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs px-3 py-1 rounded-full font-medium border ${statusBg}">${statusText}</span>
+                                <button onclick="window.deleteOrder('${orderId}')" class="text-red-500 hover:text-red-700 text-xs p-1 rounded-lg transition cursor-pointer" title="ลบออเดอร์">
+                                    🗑️ ลบ
+                                </button>
+                            </div>
                         </div>
                         <ul class="space-y-1 mb-4 divide-y divide-gray-50">${itemsHtml}</ul>
                     </div>
@@ -81,17 +85,52 @@ function listenOrders() {
     });
 }
 
-// ฟังก์ชันอัปเดตสถานะออเดอร์ใน Firestore
+// ฟังก์ชันอัปเดตสถานะออเดอร์
 window.updateStatus = async function(orderId, newStatus) {
     try {
         const orderRef = doc(db, "orders", orderId);
-        await updateDoc(orderRef, {
-            status: newStatus
-        });
+        await updateDoc(orderRef, { status: newStatus });
     } catch (e) {
         console.error("Error updating status: ", e);
         alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ');
     }
+}
+
+// ฟังก์ชันลบออเดอร์
+window.deleteOrder = async function(orderId) {
+    if (confirm('คุณต้องการลบออเดอร์นี้ใช่หรือไม่?')) {
+        try {
+            await deleteDoc(doc(db, "orders", orderId));
+        } catch (e) {
+            console.error("Error deleting order: ", e);
+            alert('เกิดข้อผิดพลาดในการลบออเดอร์');
+        }
+    }
+}
+
+// ฟังก์ชันเพิ่มออเดอร์ใหม่จากหน้าแอดมิน
+const addOrderForm = document.getElementById('add-order-form');
+if (addOrderForm) {
+    addOrderForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const table = document.getElementById('admin-table').value;
+        const name = document.getElementById('admin-menu-name').value;
+        const price = Number(document.getElementById('admin-price').value);
+
+        try {
+            await addDoc(collection(db, "orders"), {
+                table: table,
+                items: [{ name: name, price: price, qty: 1 }],
+                status: 'pending',
+                createdAt: serverTimestamp()
+            });
+            addOrderForm.reset();
+            alert('🎉 เพิ่มออเดอร์สำเร็จ!');
+        } catch (err) {
+            console.error("Error adding order: ", err);
+            alert('เกิดข้อผิดพลาดในการเพิ่มออเดอร์');
+        }
+    });
 }
 
 listenOrders();
