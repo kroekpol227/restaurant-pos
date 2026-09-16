@@ -1,18 +1,37 @@
 import { db } from "./firebase-config.js";
-import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-const ordersListEl = document.getElementById('admin-orders-list');
-const adminMenuListEl = document.getElementById('admin-menu-list');
+// --- ฟังก์ชันสลับหน้าจอ (Tab Switching) ---
+window.switchTab = function(tabName) {
+    const sectionOrders = document.getElementById('section-orders');
+    const sectionMenus = document.getElementById('section-menus');
+    const btnOrders = document.getElementById('btn-tab-orders');
+    const btnMenus = document.getElementById('btn-tab-menus');
 
-// 1. ฟังก์ชันดึงออเดอร์แบบ Real-time
-function listenOrders() {
+    if (tabName === 'orders') {
+        sectionOrders.classList.remove('hidden');
+        sectionMenus.classList.add('hidden');
+        
+        btnOrders.className = "flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer bg-orange-500 text-white shadow-sm flex items-center justify-center gap-1.5";
+        btnMenus.className = "flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-gray-600 hover:text-gray-900 bg-white sm:bg-transparent flex items-center justify-center gap-1.5";
+    } else {
+        sectionOrders.classList.add('hidden');
+        sectionMenus.classList.remove('hidden');
+        
+        btnMenus.className = "flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer bg-orange-500 text-white shadow-sm flex items-center justify-center gap-1.5";
+        btnOrders.className = "flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-gray-600 hover:text-gray-900 bg-white sm:bg-transparent flex items-center justify-center gap-1.5";
+    }
+}
+
+// ================= 1. โซนจัดการออเดอร์ =================
+function listenAdminOrders() {
+    const container = document.getElementById('admin-orders-list');
     const q = query(collection(db, "orders"));
 
     onSnapshot(q, (snapshot) => {
-        if (!ordersListEl) return;
-        
+        if (!container) return;
         if (snapshot.empty) {
-            ordersListEl.innerHTML = '<div class="text-center py-10 text-gray-400 bg-white rounded-2xl col-span-full shadow-sm">ยังไม่มีออเดอร์ในขณะนี้</div>';
+            container.innerHTML = '<div class="text-center py-10 text-gray-400 bg-white rounded-2xl col-span-full shadow-sm">ยังไม่มีออเดอร์ในขณะนี้</div>';
             return;
         }
 
@@ -21,72 +40,60 @@ function listenOrders() {
             const orderId = docSnap.id;
             const order = docSnap.data();
 
-            let statusText = '⏳ รอทำ';
-            let statusBg = 'bg-yellow-50 text-yellow-700 border-yellow-200';
-            
-            if (order.status === 'cooking') {
-                statusText = '🔥 กำลังทำ';
-                statusBg = 'bg-blue-50 text-blue-700 border-blue-200';
-            } else if (order.status === 'done') {
-                statusText = '✅ เสร็จแล้ว';
-                statusBg = 'bg-green-50 text-green-700 border-green-200';
-            }
+            let statusColor = 'bg-yellow-50 text-yellow-700 border-yellow-200';
+            if (order.status === 'cooking') statusColor = 'bg-blue-50 text-blue-700 border-blue-200';
+            if (order.status === 'done') statusColor = 'bg-green-50 text-green-700 border-green-200';
 
-            let itemsHtml = '';
+            let itemsList = '';
             let total = 0;
-            if (order.items && Array.isArray(order.items)) {
+            if (order.items) {
                 order.items.forEach(i => {
-                    itemsHtml += `<li class="text-sm text-gray-600 flex justify-between py-1"><span>• ${i.name} x ${i.qty}</span> <span class="font-medium">${i.price * i.qty} บาท</span></li>`;
+                    itemsList += `<li class="text-xs text-gray-600 flex justify-between">• ${i.name} x ${i.qty} <span>${i.price * i.qty} ฿</span></li>`;
                     total += i.price * i.qty;
                 });
             }
 
             html += `
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-between">
+                <div class="bg-white border border-gray-200 p-4 rounded-2xl shadow-sm space-y-3 flex flex-col justify-between">
                     <div>
-                        <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
-                            <span class="font-bold text-base text-gray-800">โต๊ะ: ${order.table}</span>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs px-3 py-1 rounded-full font-medium border ${statusBg}">${statusText}</span>
-                                <button onclick="window.deleteOrder('${orderId}')" class="text-red-500 hover:text-red-700 text-xs p-1 rounded-lg transition cursor-pointer" title="ลบออเดอร์">
-                                    🗑️ ลบ
-                                </button>
-                            </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-sm text-gray-800">โต๊ะ: ${order.table}</span>
+                            <span class="px-2.5 py-0.5 rounded-full border text-xs font-semibold ${statusColor}">${order.status}</span>
                         </div>
-                        <ul class="space-y-1 mb-4 divide-y divide-gray-50">${itemsHtml}</ul>
+                        <ul class="space-y-1 divide-y divide-gray-100 py-1">${itemsList}</ul>
                     </div>
-
-                    <div>
-                        <div class="flex justify-between items-center mb-3 pt-2 border-t border-dashed border-gray-200 text-sm font-bold">
-                            <span>ยอดรวม:</span>
-                            <span class="text-orange-600 text-base">${total} บาท</span>
+                    
+                    <div class="space-y-2 pt-2 border-t border-gray-100">
+                        <div class="flex justify-between items-center text-xs font-bold">
+                            <span>ยอดรวมทั้งหมด:</span>
+                            <span class="text-orange-600 text-sm">${total} บาท</span>
                         </div>
-                        
-                        <div class="grid grid-cols-3 gap-2">
-                            <button onclick="window.updateStatus('${orderId}', 'pending')" 
-                                class="bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-xs py-2 rounded-xl font-medium transition cursor-pointer border border-yellow-200">
-                                ⏳ รอทำ
-                            </button>
-                            <button onclick="window.updateStatus('${orderId}', 'cooking')" 
-                                class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs py-2 rounded-xl font-medium transition cursor-pointer border border-blue-200">
-                                🔥 กำลังทำ
-                            </button>
-                            <button onclick="window.updateStatus('${orderId}', 'done')" 
-                                class="bg-green-50 hover:bg-green-100 text-green-700 text-xs py-2 rounded-xl font-medium transition cursor-pointer border border-green-200">
-                                ✅ เสร็จ
-                            </button>
+                        <div class="grid grid-cols-3 gap-1.5 pt-1">
+                            <button onclick="window.updateStatus('${orderId}', 'pending')" class="bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-xs font-medium py-1.5 rounded-lg border border-yellow-200 transition cursor-pointer">รอทำ</button>
+                            <button onclick="window.updateStatus('${orderId}', 'cooking')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium py-1.5 rounded-lg border border-blue-200 transition cursor-pointer">กำลังทำ</button>
+                            <button onclick="window.updateStatus('${orderId}', 'done')" class="bg-green-50 hover:bg-green-100 text-green-700 text-xs font-medium py-1.5 rounded-lg border border-green-200 transition cursor-pointer">เสร็จแล้ว</button>
                         </div>
                     </div>
                 </div>
             `;
         });
-
-        ordersListEl.innerHTML = html;
+        container.innerHTML = html;
     });
 }
 
-// 2. ฟังก์ชันดึงรายการเมนูมาแสดงในหน้า Admin แบบ Real-time
-function listenMenus() {
+window.updateStatus = async function(orderId, newStatus) {
+    try {
+        await updateDoc(doc(db, "orders", orderId), { status: newStatus });
+    } catch (e) {
+        console.error("Error updating status: ", e);
+        alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ');
+    }
+}
+
+
+// ================= 2. โซนจัดการเมนูอาหาร (เพิ่ม / ลบ) =================
+function listenAdminMenus() {
+    const adminMenuListEl = document.getElementById('admin-menu-list');
     const q = query(collection(db, "menus"));
 
     onSnapshot(q, (snapshot) => {
@@ -119,37 +126,12 @@ function listenMenus() {
                 </div>
             `;
         });
-
         adminMenuListEl.innerHTML = html;
     });
 }
 
-// ฟังก์ชันอัปเดตสถานะออเดอร์
-window.updateStatus = async function(orderId, newStatus) {
-    try {
-        const orderRef = doc(db, "orders", orderId);
-        await updateDoc(orderRef, { status: newStatus });
-    } catch (e) {
-        console.error("Error updating status: ", e);
-        alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ');
-    }
-}
-
-// ฟังก์ชันลบออเดอร์
-window.deleteOrder = async function(orderId) {
-    if (confirm('คุณต้องการลบออเดอร์นี้ใช่หรือไม่?')) {
-        try {
-            await deleteDoc(doc(db, "orders", orderId));
-        } catch (e) {
-            console.error("Error deleting order: ", e);
-            alert('เกิดข้อผิดพลาดในการลบออเดอร์');
-        }
-    }
-}
-
-// ฟังก์ชันลบเมนูออกจากร้าน (ลบจาก collection "menus")
 window.deleteMenu = async function(menuId) {
-    if (confirm('⚠️ คุณต้องการลบเมนูนี้ออกจากร้านใช่หรือไม่? ลูกค้าจะไม่สามารถสั่งได้อีก')) {
+    if (confirm('⚠️ คุณต้องการลบเมนูนี้ออกจากร้านใช่หรือไม่?')) {
         try {
             await deleteDoc(doc(db, "menus", menuId));
             alert('🗑️ ลบเมนูเรียบร้อยแล้ว');
@@ -160,7 +142,6 @@ window.deleteMenu = async function(menuId) {
     }
 }
 
-// ฟังก์ชันเพิ่มเมนูอาหาร/เครื่องดื่มใหม่เข้าร้าน
 const addMenuForm = document.getElementById('add-menu-form');
 if (addMenuForm) {
     addMenuForm.addEventListener('submit', async (e) => {
@@ -184,5 +165,6 @@ if (addMenuForm) {
     });
 }
 
-listenOrders();
-listenMenus();
+// เริ่มต้นทำงานโหลดข้อมูลทั้ง 2 ส่วนทันทีที่เปิดหน้าแอดมิน
+listenAdminOrders();
+listenAdminMenus();

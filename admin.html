@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการร้านอาหาร (หลังบ้าน)</title>
+    <title>ระบบหลังบ้านร้านอาหาร</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -12,54 +12,68 @@
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen p-4 pb-20">
 
-    <header class="max-w-4xl mx-auto bg-white shadow-sm rounded-2xl p-4 mb-6 flex justify-between items-center">
-        <h1 class="text-xl font-bold text-orange-600">🍳 ระบบจัดการร้านอาหาร (หลังบ้าน)</h1>
-        <div class="text-sm bg-orange-50 text-orange-600 font-medium px-3 py-1.5 rounded-xl border border-orange-200">
-            สถานะ: เชื่อมต่อ Real-time 🟢
+    <header class="max-w-4xl mx-auto bg-white shadow-sm rounded-2xl p-4 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div>
+            <h1 class="text-xl font-bold text-orange-600">🍳 ระบบหลังบ้านร้านอาหาร</h1>
+            <p class="text-xs text-gray-400">เลือกโหมดการจัดการด้านล่างได้เลยครับ</p>
+        </div>
+        
+        <!-- 2 ปุ่มหลักสำหรับสลับหน้าจอ -->
+        <div class="flex bg-gray-100 p-1.5 rounded-2xl gap-2 w-full sm:w-auto">
+            <button id="btn-tab-orders" onclick="switchTab('orders')" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer bg-orange-500 text-white shadow-sm flex items-center justify-center gap-1.5">
+                📦 ออเดอร์อาหาร
+            </button>
+            <button id="btn-tab-menus" onclick="switchTab('menus')" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-gray-600 hover:text-gray-900 bg-white sm:bg-transparent flex items-center justify-center gap-1.5">
+                🍔 เพิ่ม/ลบ เมนู
+            </button>
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto space-y-6">
+    <main class="max-w-4xl mx-auto">
         
-        <!-- ฟอร์มเพิ่มเมนูอาหารเข้าร้าน -->
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-            <h2 class="font-bold text-gray-700 mb-3 flex items-center gap-1">➕ เพิ่มเมนูอาหาร/เครื่องดื่มเข้าร้าน</h2>
-            <form id="add-menu-form" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <input type="text" id="menu-name" placeholder="ชื่อเมนู (เช่น ชาไทย)" required 
-                    class="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-orange-500">
-                <input type="number" id="menu-price" placeholder="ราคา (บาท)" required 
-                    class="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-orange-500">
-                <select id="menu-category" required class="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-orange-500 bg-white">
-                    <option value="" disabled selected>-- เลือกหมวดหมู่ --</option>
-                    <option value="food">🍲 อาหาร</option>
-                    <option value="drink">🧋 น้ำ / เครื่องดื่ม</option>
-                    <option value="burger">🍔 เบอร์เกอร์</option>
-                </select>
-                <button type="submit" 
-                    class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2 rounded-xl transition cursor-pointer shadow-sm">
-                    เพิ่มเมนูนี้
-                </button>
-            </form>
-        </div>
-
-        <!-- รายการเมนูทั้งหมดในร้าน (สำหรับกดลบ) -->
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-            <h2 class="font-bold text-gray-700 mb-3 flex items-center gap-1">📋 รายการเมนูที่มีในร้านทั้งหมด</h2>
-            <div id="admin-menu-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <div class="text-center py-6 text-gray-400 col-span-full">กำลังโหลดเมนู...</div>
-            </div>
-        </div>
-
-        <!-- รายการออเดอร์จากลูกค้า -->
-        <div>
-            <h2 class="text-lg font-bold mb-4 text-gray-700">📦 รายการออเดอร์ของลูกค้า</h2>
+        <!-- โหมดที่ 1: หน้าออเดอร์อาหาร -->
+        <div id="section-orders" class="space-y-4">
+            <h2 class="text-lg font-bold text-gray-700 flex items-center gap-1">📦 รายการออเดอร์ของลูกค้า</h2>
             <div id="admin-orders-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="text-center py-10 text-gray-400 bg-white rounded-2xl col-span-full shadow-sm">กำลังโหลดออเดอร์...</div>
             </div>
         </div>
 
+        <!-- โหมดที่ 2: หน้าเพิ่ม/ลบเมนู (ซ่อนไว้ก่อน จะแสดงเมื่อกดปุ่มที่ 2) -->
+        <div id="section-menus" class="space-y-6 hidden">
+            <!-- ฟอร์มเพิ่มเมนูอาหาร -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="font-bold text-gray-700 mb-3 flex items-center gap-1">➕ เพิ่มเมนูใหม่</h2>
+                <form id="add-menu-form" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input type="text" id="menu-name" placeholder="ชื่อเมนู" required 
+                        class="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-orange-500">
+                    <input type="number" id="menu-price" placeholder="ราคา (บาท)" required 
+                        class="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-orange-500">
+                    <select id="menu-category" required class="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-orange-500 bg-white">
+                        <option value="" disabled selected>-- เลือกหมวดหมู่ --</option>
+                        <option value="food">🍲 อาหาร</option>
+                        <option value="drink">🧋 เครื่องดื่ม</option>
+                        <option value="burger">🍔 เบอร์เกอร์</option>
+                    </select>
+                    <button type="submit" 
+                        class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2 rounded-xl transition cursor-pointer shadow-sm sm:col-span-3">
+                        บันทึกเพิ่มเมนู
+                    </button>
+                </form>
+            </div>
+
+            <!-- รายการเมนูทั้งหมด (สำหรับกดลบ) -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="font-bold text-gray-700 mb-3 flex items-center gap-1">📋 รายการเมนูทั้งหมด (กดลบได้)</h2>
+                <div id="admin-menu-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <div class="text-center py-6 text-gray-400 col-span-full">กำลังโหลดเมนู...</div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
+    <!-- ใช้ไฟล์ admin.js ตัวเดียวจบ -->
     <script type="module" src="admin.js"></script>
 </body>
 </html>
